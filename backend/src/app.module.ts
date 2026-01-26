@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { LoggerModule } from './logger/logger.module';
 import { CacheModule } from './cache/cache.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { GlobalConfigModule } from './config/config.module';
 import { BullModule } from '@nestjs/bull';
@@ -30,6 +31,7 @@ import { GlobalConfigService } from './config/global-config.service';
       inject: [GlobalConfigService],
     }),
     NotificationModule,
+    AnalyticsModule,
     SettlementModule,
   ],
   controllers: [AppController],
