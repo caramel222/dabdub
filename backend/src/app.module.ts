@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { CacheModule } from './cache/cache.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { LoggerModule } from './logger/logger.module';
 import { SettlementModule } from './settlement/settlement.module';
 import { SwaggerModule as SwaggerDocModule } from './common/swagger/swagger.module';
@@ -56,6 +57,7 @@ import { AuthModule } from './auth/auth.module';
       inject: [GlobalConfigService],
     }),
     NotificationModule,
+    AnalyticsModule,
     SettlementModule,
     PublicModule,
   ],
