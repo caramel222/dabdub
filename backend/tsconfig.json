@@ -28,7 +28,7 @@
     "incremental": true,
     "skipLibCheck": true,
     "noEmitOnError": false,
-    "suppressNoImplicitAnyIndexErrors": true,
+    "suppressImplicitAnyIndexErrors": true,
     "noImplicitThis": false,
 
     "esModuleInterop": true,
