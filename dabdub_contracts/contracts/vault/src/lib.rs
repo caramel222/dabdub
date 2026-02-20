@@ -30,6 +30,7 @@ pub enum DataKey {
     TotalFees,
     Paused,
     PendingClaim(BytesN<32>),
+    AllPendingClaims,
 }
 
 const MAX_FEE: i128 = 5_000_000;
@@ -116,6 +117,11 @@ impl Vault {
             .set(&DataKey::AvailableFees, &0i128);
         env.storage().instance().set(&DataKey::TotalFees, &0i128);
         env.storage().instance().set(&DataKey::Paused, &false);
+
+        let empty_vec: Vec<BytesN<32>> = Vec::new(&env);
+        env.storage()
+            .instance()
+            .set(&DataKey::AllPendingClaims, &empty_vec);
 
         access_control::grant_role(&env, admin, access_control::ADMIN_ROLE);
     }
@@ -211,6 +217,16 @@ impl Vault {
             .instance()
             .set(&DataKey::PendingClaim(payment_id.clone()), &claim);
 
+        let mut all_claims: Vec<BytesN<32>> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AllPendingClaims)
+            .unwrap_or_else(|| Vec::new(&env));
+        all_claims.push_back(payment_id.clone());
+        env.storage()
+            .instance()
+            .set(&DataKey::AllPendingClaims, &all_claims);
+
         PaymentProcessedEvent {
             user_wallet: user_wallet.clone(),
             payment_id: payment_id.clone(),
@@ -296,6 +312,22 @@ impl Vault {
         env.storage()
             .instance()
             .remove(&DataKey::PendingClaim(payment_id.clone()));
+
+        let mut all_claims: Vec<BytesN<32>> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AllPendingClaims)
+            .unwrap_or_else(|| Vec::new(&env));
+        let mut new_claims = Vec::new(&env);
+        for i in 0..all_claims.len() {
+            let claim_id = all_claims.get(i).unwrap();
+            if claim_id != payment_id {
+                new_claims.push_back(claim_id);
+            }
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::AllPendingClaims, &new_claims);
 
         PaymentCancelledEvent {
             payment_id: payment_id.clone(),
@@ -529,6 +561,47 @@ impl Vault {
         let required_balance = available_payments + available_fees;
 
         vault_balance >= required_balance
+    }
+
+    pub fn get_pending_claim(env: Env, payment_id: BytesN<32>) -> Option<PendingClaim> {
+        env.storage()
+            .instance()
+            .get(&DataKey::PendingClaim(payment_id))
+    }
+
+    pub fn get_all_pending_claims(env: Env) -> Vec<BytesN<32>> {
+        env.storage()
+            .instance()
+            .get(&DataKey::AllPendingClaims)
+            .unwrap_or_else(|| Vec::new(&env))
+    }
+
+    pub fn get_pending_claims_count(env: Env) -> u32 {
+        let all_claims: Vec<BytesN<32>> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AllPendingClaims)
+            .unwrap_or_else(|| Vec::new(&env));
+        all_claims.len()
+    }
+
+    pub fn is_claim_expired(env: Env, payment_id: BytesN<32>) -> bool {
+        let claim: Option<PendingClaim> = env
+            .storage()
+            .instance()
+            .get(&DataKey::PendingClaim(payment_id));
+
+        match claim {
+            Some(c) => {
+                let current_ledger = env.ledger().sequence();
+                current_ledger >= c.expiry_ledger
+            }
+            None => false,
+        }
+    }
+
+    pub fn get_recipient_pending_claims(env: Env, _recipient: Address) -> Vec<BytesN<32>> {
+        Vec::new(&env)
     }
 
     pub fn get_claim_period(env: Env) -> (bool, u64) {
