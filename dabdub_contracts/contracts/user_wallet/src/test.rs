@@ -1,6 +1,7 @@
 #![cfg(test)]
 use crate::{UserWallet, UserWalletClient};
 use soroban_sdk::{testutils::Address as _, token, Address, Env};
+use vault::Vault;
 
 #[test]
 fn test_initialize() {
@@ -46,7 +47,6 @@ fn test_get_balance() {
     let contract_id = env.register(UserWallet, (&backend, &vault, &usdc, &None::<Address>));
     let client = UserWalletClient::new(&env, &contract_id);
 
-    // Mint some tokens to wallet
     let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
     token_admin_client.mint(&contract_id, &1000_0000000);
 
@@ -68,11 +68,9 @@ fn test_withdraw_by_backend() {
     let contract_id = env.register(UserWallet, (&backend, &vault, &usdc, &None::<Address>));
     let client = UserWalletClient::new(&env, &contract_id);
 
-    // Mint tokens
     let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
     token_admin_client.mint(&contract_id, &1000_0000000);
 
-    // Withdraw
     client.withdraw(&backend, &500_0000000, &recipient);
 
     assert_eq!(client.get_balance(), 500_0000000);
@@ -97,11 +95,9 @@ fn test_withdraw_by_owner() {
     let contract_id = env.register(UserWallet, (&backend, &vault, &usdc, &Some(owner.clone())));
     let client = UserWalletClient::new(&env, &contract_id);
 
-    // Mint tokens
     let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
     token_admin_client.mint(&contract_id, &1000_0000000);
 
-    // Owner withdraws
     client.withdraw(&owner, &300_0000000, &recipient);
 
     assert_eq!(client.get_balance(), 700_0000000);
@@ -141,11 +137,9 @@ fn test_withdraw_insufficient_balance() {
     let contract_id = env.register(UserWallet, (&backend, &vault, &usdc, &None::<Address>));
     let client = UserWalletClient::new(&env, &contract_id);
 
-    // Mint only 50 USDC
     let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
     token_admin_client.mint(&contract_id, &50_0000000);
 
-    // Try to withdraw 100
     client.withdraw(&backend, &100_0000000, &recipient);
 }
 
@@ -200,11 +194,9 @@ fn test_emergency_withdraw() {
     let contract_id = env.register(UserWallet, (&backend, &vault, &usdc, &Some(owner.clone())));
     let client = UserWalletClient::new(&env, &contract_id);
 
-    // Mint tokens
     let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
     token_admin_client.mint(&contract_id, &1000_0000000);
 
-    // Emergency withdraw
     client.emergency_withdraw(&owner);
 
     assert_eq!(client.get_balance(), 0);
@@ -246,4 +238,105 @@ fn test_emergency_withdraw_not_owner() {
     let client = UserWalletClient::new(&env, &contract_id);
 
     client.emergency_withdraw(&not_owner);
+}
+
+#[test]
+fn test_transfer_to_vault_by_backend() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let backend = Address::generate(&env);
+    let admin = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let asset_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let usdc = asset_contract.address();
+
+    let vault_id = env.register(Vault, (&admin, &usdc, &500_000i128, &1_000_000i128));
+
+    let wallet_id = env.register(UserWallet, (&backend, &vault_id, &usdc, &None::<Address>));
+    let wallet = UserWalletClient::new(&env, &wallet_id);
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
+    token_admin_client.mint(&wallet_id, &100_000_000);
+
+    let total_amount = wallet.transfer_to_vault(&backend, &50_000_000, &None::<Address>);
+    assert_eq!(total_amount, 50_500_000);
+
+    let token_client = token::Client::new(&env, &usdc);
+    assert_eq!(token_client.balance(&vault_id), 50_500_000);
+    assert_eq!(token_client.balance(&wallet_id), 49_500_000);
+}
+
+#[test]
+fn test_transfer_to_vault_with_recipient() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let backend = Address::generate(&env);
+    let admin = Address::generate(&env);
+    let recipient = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let asset_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let usdc = asset_contract.address();
+
+    let vault_id = env.register(Vault, (&admin, &usdc, &500_000i128, &1_000_000i128));
+
+    let wallet_id = env.register(UserWallet, (&backend, &vault_id, &usdc, &None::<Address>));
+    let wallet = UserWalletClient::new(&env, &wallet_id);
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
+    token_admin_client.mint(&wallet_id, &100_000_000);
+
+    let total_amount = wallet.transfer_to_vault(&backend, &50_000_000, &Some(recipient.clone()));
+    assert_eq!(total_amount, 50_500_000);
+
+    let token_client = token::Client::new(&env, &usdc);
+    assert_eq!(token_client.balance(&vault_id), 50_500_000);
+    assert_eq!(token_client.balance(&wallet_id), 49_500_000);
+}
+
+#[test]
+#[should_panic(expected = "Insufficient balance")]
+fn test_transfer_to_vault_insufficient_balance_including_fee() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let backend = Address::generate(&env);
+    let admin = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let asset_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let usdc = asset_contract.address();
+
+    let vault_id = env.register(Vault, (&admin, &usdc, &500_000i128, &1_000_000i128));
+    let wallet_id = env.register(UserWallet, (&backend, &vault_id, &usdc, &None::<Address>));
+    let wallet = UserWalletClient::new(&env, &wallet_id);
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &usdc);
+    token_admin_client.mint(&wallet_id, &50_000_000);
+
+    wallet.transfer_to_vault(&backend, &50_000_000, &None::<Address>);
+}
+
+#[test]
+#[should_panic(expected = "Not authorized")]
+fn test_transfer_to_vault_unauthorized() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let backend = Address::generate(&env);
+    let admin = Address::generate(&env);
+    let unauthorized = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let asset_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let usdc = asset_contract.address();
+
+    let vault_id = env.register(Vault, (&admin, &usdc, &500_000i128, &1_000_000i128));
+    let wallet_id = env.register(UserWallet, (&backend, &vault_id, &usdc, &None::<Address>));
+    let wallet = UserWalletClient::new(&env, &wallet_id);
+
+    wallet.transfer_to_vault(&unauthorized, &10_000_000, &None::<Address>);
 }
