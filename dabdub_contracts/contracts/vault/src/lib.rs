@@ -28,6 +28,14 @@ pub struct PendingClaim {
 
 #[contracttype]
 #[derive(Clone)]
+pub struct PendingClaim {
+    pub payment_amount: i128,
+    pub fee_amount: i128,
+    pub expiry_ledger: u32,
+}
+
+#[contracttype]
+#[derive(Clone)]
 pub enum DataKey {
     Admin,
     Roles(Address),
