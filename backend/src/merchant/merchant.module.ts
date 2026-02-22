@@ -44,6 +44,7 @@ import { PlatformFeeDefault } from './entities/platform-fee-default.entity';
 import { UserEntity } from '../database/entities/user.entity';
 import { PlatformFeeAuditLog } from './entities/platform-fee-audit-log.entity';
 import { SuperAdminGuard } from '../auth/guards/super-admin.guard';
+import { RedisModule } from '../common/redis';
 import { MerchantSuspension } from './entities/merchant-suspension.entity';
 import { MerchantTermination } from './entities/merchant-termination.entity';
 import { MerchantFlag } from './entities/merchant-flag.entity';
@@ -77,6 +78,7 @@ import { BullModule } from '@nestjs/bull';
     ),
     AuthModule,
     ConfigModule,
+    RedisModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
