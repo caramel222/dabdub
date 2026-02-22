@@ -142,6 +142,9 @@ export class Merchant {
   @Column({ name: 'api_quota_reset_at', type: 'timestamp', nullable: true })
   apiQuotaResetAt?: Date;
 
+  @Column({ name: 'ip_allowlist_enforced', type: 'boolean', default: false })
+  ipAllowlistEnforced!: boolean;
+
   // Relationships
   @OneToMany(() => Settlement, (settlement) => settlement.merchant)
   settlements!: Settlement[];
