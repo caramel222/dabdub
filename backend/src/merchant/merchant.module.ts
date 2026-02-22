@@ -17,6 +17,12 @@ import { SupportTicketService } from './services/support-ticket.service';
 import { MerchantLifecycleController } from './controllers/merchant-lifecycle.controller';
 import { MerchantLifecycleService } from './services/merchant-lifecycle.service';
 import { MerchantLifecycleProcessor } from './processors/merchant-lifecycle.processor';
+import { MerchantDocument } from './entities/merchant-document.entity';
+import { DocumentRequest } from './entities/document-request.entity';
+import { MerchantDocumentService } from './services/merchant-document.service';
+import { DocumentRequestService } from './services/document-request.service';
+import { MerchantDocumentController } from './controllers/merchant-document.controller';
+import { AdminDocumentController } from './controllers/admin-document.controller';
 import { Merchant } from '../database/entities/merchant.entity';
 import { AuthModule } from '../auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -38,7 +44,7 @@ import { SuperAdminGuard } from '../auth/guards/super-admin.guard';
 import { MerchantSuspension } from './entities/merchant-suspension.entity';
 import { MerchantTermination } from './entities/merchant-termination.entity';
 import { MerchantFlag } from './entities/merchant-flag.entity';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -58,6 +64,8 @@ import { BullModule } from '@nestjs/bull';
       MerchantSuspension,
       MerchantTermination,
       MerchantFlag,
+      MerchantDocument,
+      DocumentRequest,
     ]),
     BullModule.registerQueue(
       { name: 'settlements' },
@@ -71,8 +79,7 @@ import { BullModule } from '@nestjs/bull';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: (configService.get<string>('JWT_EXPIRATION') ||
-            '1d') as any,
+          expiresIn: (configService.get<string>('JWT_EXPIRATION') || '1d') as any,
           algorithm: 'HS256',
         },
       }),
@@ -82,6 +89,8 @@ import { BullModule } from '@nestjs/bull';
     MerchantController,
     MerchantFeeController,
     MerchantLifecycleController,
+    MerchantDocumentController,
+    AdminDocumentController,
     MerchantNoteController,
     MerchantTagController,
     MerchantTagAssignmentController,
@@ -98,11 +107,15 @@ import { BullModule } from '@nestjs/bull';
     SupportTicketService,
     MerchantJwtStrategy,
     SuperAdminGuard,
+    MerchantDocumentService,
+    DocumentRequestService,
   ],
   exports: [
     MerchantService,
     MerchantFeeService,
     MerchantLifecycleService,
+    MerchantDocumentService,
+    DocumentRequestService,
     MerchantNoteService,
     MerchantTagService,
     SupportTicketService,
