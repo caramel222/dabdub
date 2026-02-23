@@ -10,14 +10,14 @@ import { Payment } from '../database/entities/payment.entity';
 import { Settlement } from '../settlement/entities/settlement.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Merchant, Payment, Settlement]),
-        MerchantsModule,
-        HealthModule,
-        AuditModule,
-    ],
-    controllers: [AdminController],
-    providers: [AdminService],
-    exports: [AdminService],
+  imports: [
+    TypeOrmModule.forFeature([Merchant, Payment, Settlement]),
+    MerchantsModule,
+    HealthModule,
+    AuditModule,
+  ],
+  controllers: [AdminController],
+  providers: [AdminService],
+  exports: [AdminService],
 })
-export class AdminModule { }
+export class AdminModule {}
