@@ -27,7 +27,6 @@ import { MerchantDocumentController } from './controllers/merchant-document.cont
 import { AdminDocumentController } from './controllers/admin-document.controller';
 import { Merchant } from '../database/entities/merchant.entity';
 import { AuthModule } from '../auth/auth.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MerchantJwtStrategy } from './strategies/merchant-jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
@@ -48,8 +47,11 @@ import { MerchantSuspension } from './entities/merchant-suspension.entity';
 import { MerchantTermination } from './entities/merchant-termination.entity';
 import { MerchantFlag } from './entities/merchant-flag.entity';
 import { UserEntity } from '../database/entities/user.entity';
+// import { SuperAdminGuard } from '../auth/guards/super-admin.guard';
 import { GlobalConfigService } from '../config/global-config.service';
+// import { BullModule } from '@nestjs/bullmq';
 import { BullModule } from '@nestjs/bull';
+import { MerchantRepository } from './repositories/merchant.repository';
 
 @Module({
   imports: [
@@ -78,15 +80,14 @@ import { BullModule } from '@nestjs/bull';
       { name: 'notifications' },
     ),
     AuthModule,
-    ConfigModule,
     RedisModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [GlobalConfigService],
-      useFactory: async (configService: GlobalConfigService) => ({
-        secret: configService.getJwtSecret(),
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: '1d',
+          expiresIn: '1d' as any,
           algorithm: 'HS256',
         },
       }),
@@ -118,6 +119,7 @@ import { BullModule } from '@nestjs/bull';
     SuperAdminGuard,
     MerchantDocumentService,
     DocumentRequestService,
+    MerchantRepository,
   ],
   exports: [
     MerchantService,
@@ -129,6 +131,7 @@ import { BullModule } from '@nestjs/bull';
     MerchantTagService,
     SupportTicketService,
     MerchantOnboardingService,
+    MerchantRepository,
   ],
 })
 export class MerchantModule {}
