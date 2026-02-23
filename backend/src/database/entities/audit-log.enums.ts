@@ -5,6 +5,7 @@ export enum AuditAction {
   VIEW = 'view',
   EXPORT = 'export',
   SANDBOX_RESET = 'sandbox_reset',
+  EXCHANGE_RATE_OVERRIDE_SET = 'exchange_rate_override_set',
 }
 
 export enum ActorType {
